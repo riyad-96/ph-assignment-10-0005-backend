@@ -1,17 +1,10 @@
 // External modules
 const express = require('express');
-const { getDB } = require('../db/establishConnection');
-
-// Local modules
+const { getAllPartnerProfiles, getPartnerProfileBasedOnQuery } = require('../controllers/basePartner.controller');
 
 const router = express.Router();
 
-router.get('/all', async (req, res) => {
-  const db = getDB();
-  const collection = db.collection('basepartners');
-  const partners = await collection.find().toArray();
-
-  res.send(partners);
-});
+router.get('/all', getAllPartnerProfiles);
+router.get('/query', getPartnerProfileBasedOnQuery);
 
 module.exports = router;
