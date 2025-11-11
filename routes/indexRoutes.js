@@ -2,10 +2,10 @@
 const express = require('express');
 
 // Local modules
-const userRouter = require('./userRoutes');
+const verifyFirebaseAccessToken = require('../middlewares/verifyFirebaseAccessToken');
 const basePartnerRouter = require('./basePartnerRoutes');
 const partnerProfileRouter = require('./partnerProfileRoutes');
-const verifyFirebaseAccessToken = require('../middlewares/verifyFirebaseAccessToken');
+const managePartnerRouter = require('./managePartnerRoutes');
 
 const router = express.Router();
 
@@ -13,8 +13,8 @@ router.get('/', (req, res) => {
   res.send('Server is live');
 });
 
-router.use('/user', userRouter);
 router.use('/base-partner', basePartnerRouter);
 router.use('/partner-profile', verifyFirebaseAccessToken, partnerProfileRouter);
+router.use('/partner-request', verifyFirebaseAccessToken, managePartnerRouter);
 
 module.exports = router;
