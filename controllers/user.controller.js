@@ -7,12 +7,11 @@ async function getUserData(req, res) {
   if (!email) return res.status(401).send({ message: 'unique-identifier-required' });
 
   try {
-    const db = getDB();
-    const collection = db.collection('users');
-    const partnerProfile = await collection.findOne({ email });
+    const usersCollection = getDB().collection('users');
+    const userProfile = await usersCollection.findOne({ email });
 
-    if (partnerProfile) {
-      res.send(partnerProfile);
+    if (userProfile) {
+      res.send({ message: 'user-found', userProfile });
     } else {
       res.status(404).send({ message: 'user-not-found' });
     }
@@ -57,6 +56,7 @@ async function updateUserProfileData(req, res) {
     // if user not exists then create
     const userExists = await usersCollection.findOne({ email });
     if (!userExists) {
+      const newDate = new Date().toISOString();
       await usersCollection.insertOne({
         name: req.body.name,
         email,
@@ -68,6 +68,8 @@ async function updateUserProfileData(req, res) {
         experienceLevel: 'Beginner',
         rating: 0,
         partnerCount: 0,
+        createdAt: newDate,
+        updatedAt: newDate,
       });
       const newlyCreatedUserProfile = await usersCollection.findOne({ email });
       res.send({ message: 'profile-updated', userProfile: newlyCreatedUserProfile, code: 'created' });

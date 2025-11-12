@@ -5,7 +5,7 @@ const { getDB } = require('../db/establishConnection');
 async function sendPartnerRequest(req, res) {
   try {
     const email = res.locals.userInfo.email;
-    const { toId, displayName, photoURL } = req.body;
+    const { toId, name, profileImage } = req.body;
 
     // check if request already exists
     const requestsCollection = getDB().collection('partner-requests');
@@ -30,10 +30,11 @@ async function sendPartnerRequest(req, res) {
     const usersCollection = getDB().collection('users');
     const userExists = await usersCollection.findOne({ email });
     if (!userExists) {
+      const newDate = new Date().toISOString();
       await usersCollection.insertOne({
-        name: displayName,
+        name,
         email,
-        profileImage: photoURL,
+        profileImage,
         subject: '',
         studyMode: 'Online',
         availabilityTime: 'Early Morning (5-8 AM)',
@@ -41,6 +42,8 @@ async function sendPartnerRequest(req, res) {
         experienceLevel: 'Beginner',
         rating: 0,
         partnerCount: 0,
+        createdAt: newDate,
+        updatedAt: newDate,
       });
       const newlyCreatedUser = await usersCollection.findOneAndUpdate({ email }, { $inc: { partnerCount: 1 } }, { returnDocument: 'after' });
       res.send({ message: 'partner-request-sent', userProfile: newlyCreatedUser, code: 'created' });
