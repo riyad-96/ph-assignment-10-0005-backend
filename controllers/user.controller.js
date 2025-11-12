@@ -39,7 +39,7 @@ async function createUserProfile(req, res) {
     const inserted = await collection.insertOne({ ...newPartnerProfileData, email, createdAt: newDate, updatedAt: newDate });
     if (inserted) {
       const createdProfileData = await collection.findOne({ _id: inserted.insertedId });
-      res.send(createdProfileData);
+      res.send({ message: 'profile-created', userProfile: createdProfileData });
     } else {
       res.status(404).send({ message: 'profile-creation-failed' });
     }
