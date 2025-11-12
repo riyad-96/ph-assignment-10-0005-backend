@@ -1,20 +1,20 @@
 // Local modules
 const { getDB } = require('../db/establishConnection');
 
-async function getPartnerProfileData(req, res) {
+async function getUserData(req, res) {
   const email = res.locals.userInfo?.email;
 
   if (!email) return res.status(401).send({ message: 'unique-identifier-required' });
 
   try {
     const db = getDB();
-    const collection = db.collection('partner-profiles');
+    const collection = db.collection('users');
     const partnerProfile = await collection.findOne({ email });
 
     if (partnerProfile) {
       res.send(partnerProfile);
     } else {
-      res.status(404).send({ message: 'profile-not-found' });
+      res.status(404).send({ message: 'user-not-found' });
     }
   } catch (err) {
     console.error(err);
@@ -22,13 +22,13 @@ async function getPartnerProfileData(req, res) {
   }
 }
 
-async function createPartnerProfile(req, res) {
+async function createUserProfile(req, res) {
   const newPartnerProfileData = req.body;
   const { email } = res.locals.userInfo;
 
   try {
     const db = getDB();
-    const collection = db.collection('partner-profiles');
+    const collection = db.collection('users');
 
     const exists = await collection.findOne({ email });
     if (exists) {
@@ -48,13 +48,33 @@ async function createPartnerProfile(req, res) {
   }
 }
 
-async function updatePartnerProfileData(req, res) {
-  const { email } = res.locals.userInfo;
+async function updateUserProfileData(req, res) {
+  const email = res.locals.userInfo.email;
 
   try {
-    const db = getDB();
-    const collection = db.collection('partner-profiles');
-    const updateInfo = await collection.findOneAndUpdate(
+    const usersCollection = getDB().collection('users');
+
+    // if user not exists then create
+    const userExists = await usersCollection.findOne({ email });
+    if (!userExists) {
+      await usersCollection.insertOne({
+        name: req.body.name,
+        email,
+        profileImage: req.body.profileImage,
+        subject: '',
+        studyMode: 'Online',
+        availabilityTime: 'Early Morning (5-8 AM)',
+        location: '',
+        experienceLevel: 'Beginner',
+        rating: 0,
+        partnerCount: 0,
+      });
+      const newlyCreatedUserProfile = await usersCollection.findOne({ email });
+      res.send({ message: 'profile-updated', userProfile: newlyCreatedUserProfile, code: 'created' });
+      return;
+    }
+
+    const updatedInfo = await usersCollection.findOneAndUpdate(
       { email },
       {
         $set: { ...req.body, updatedAt: new Date().toISOString() },
@@ -63,10 +83,11 @@ async function updatePartnerProfileData(req, res) {
         returnDocument: 'after',
       }
     );
-    res.send(updateInfo);
+    res.send({ message: 'profile-updated', userProfile: updatedInfo });
   } catch (err) {
+    console.log(err);
     res.status(500).send({ message: 'server-error' });
   }
 }
 
-module.exports = { getPartnerProfileData, createPartnerProfile, updatePartnerProfileData };
+module.exports = { getUserData, createUserProfile, updateUserProfileData };

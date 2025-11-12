@@ -1,13 +1,8 @@
-// External modules
-const express = require('express');
-const { ObjectId } = require('mongodb');
-
 // Local modules
+const { ObjectId } = require('mongodb');
 const { getDB } = require('../db/establishConnection');
 
-const router = express();
-
-router.post('/send-request', async (req, res) => {
+async function sendPartnerRequest(req, res) {
   try {
     const email = res.locals.userInfo.email;
     const { toId, displayName, photoURL } = req.body;
@@ -31,10 +26,11 @@ router.post('/send-request', async (req, res) => {
       requestBy: email,
     });
 
-    const partnerProfileCollection = getDB().collection('partner-profiles');
-    const partnerProfileExists = await partnerProfileCollection.findOne({ email });
-    if (!partnerProfileExists) {
-      await partnerProfileCollection.insertOne({
+    // check if user exists. if not then create and update
+    const usersCollection = getDB().collection('users');
+    const userExists = await usersCollection.findOne({ email });
+    if (!userExists) {
+      await usersCollection.insertOne({
         name: displayName,
         email,
         profileImage: photoURL,
@@ -46,20 +42,20 @@ router.post('/send-request', async (req, res) => {
         rating: 0,
         partnerCount: 0,
       });
-      const newlyCreatedPartnerProfile = await partnerProfileCollection.findOneAndUpdate({ email }, { $inc: { partnerCount: 1 } }, { returnDocument: 'after' });
-      res.send({ message: 'partner-request-sent', partnerProfile: newlyCreatedPartnerProfile });
+      const newlyCreatedUser = await usersCollection.findOneAndUpdate({ email }, { $inc: { partnerCount: 1 } }, { returnDocument: 'after' });
+      res.send({ message: 'partner-request-sent', userProfile: newlyCreatedUser, code: 'created' });
       return;
     }
 
-    await partnerProfileCollection.findOneAndUpdate({ email }, { $inc: { partnerCount: 1 } });
-    res.send({ message: 'partner-request-sent' });
+    const updatedUserProfile = await usersCollection.findOneAndUpdate({ email }, { $inc: { partnerCount: 1 } }, { returnDocument: 'after' });
+    res.send({ message: 'partner-request-sent', userProfile: updatedUserProfile });
   } catch (err) {
     console.log(err);
     res.status(500).send({ message: 'server-error' });
   }
-});
+}
 
-router.post('/check-request', async (req, res) => {
+async function checkPartnerRequest(req, res) {
   try {
     const email = res.locals.userInfo.email;
     const partnerId = req.body.partnerId;
@@ -74,9 +70,9 @@ router.post('/check-request', async (req, res) => {
     console.error(err);
     res.status(500).send({ message: 'server-error' });
   }
-});
+}
 
-router.get('/all-requests', async (req, res) => {
+async function allRequests(req, res) {
   try {
     const email = res.locals.userInfo.email;
     const requestsCollection = getDB().collection('partner-requests');
@@ -85,9 +81,9 @@ router.get('/all-requests', async (req, res) => {
   } catch (err) {
     res.status(400).send({ message: 'server-error' });
   }
-});
+}
 
-router.post('/remove-connection', async (req, res) => {
+async function removeConnection(req, res) {
   try {
     const email = res.locals.userInfo.email;
     const { originalId, _id } = req.body;
@@ -97,15 +93,15 @@ router.post('/remove-connection', async (req, res) => {
     await basepartnersCollection.findOneAndUpdate({ _id: new ObjectId(originalId) }, { $inc: { partnerCount: -1 } });
     await requestsCollection.deleteOne({ _id: new ObjectId(_id), requestBy: email });
     await getDB()
-      .collection('partner-profiles')
+      .collection('users')
       .findOneAndUpdate({ email }, { $inc: { partnerCount: -1 } });
     res.send({ message: 'connection-removed' });
   } catch (err) {
     res.status(500).send({ message: 'server-error' });
   }
-});
+}
 
-router.post('/update-partner-profile', async (req, res) => {
+async function updatePartnerProfile(req, res) {
   try {
     const requestBy = res.locals.userInfo.email;
 
@@ -116,6 +112,6 @@ router.post('/update-partner-profile', async (req, res) => {
   } catch (err) {
     res.status(500).send({ message: 'server-error' });
   }
-});
+}
 
-module.exports = router;
+module.exports = { sendPartnerRequest, checkPartnerRequest, allRequests, removeConnection, updatePartnerProfile };
